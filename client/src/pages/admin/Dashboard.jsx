@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Plus, X } from 'lucide-react';
+import { LogOut, Plus, X, Brain, Users } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import jsCookie from 'js-cookie';
+import { io } from 'socket.io-client';
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
@@ -13,9 +15,20 @@ export default function AdminDashboard() {
   });
   const [applicantsModal, setApplicantsModal] = useState({ show: false, companyId: null, companyName: '' });
   const [applicants, setApplicants] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchCompanies();
+
+    const socket = io('http://localhost:5000');
+    socket.on('round-submitted', () => {
+      fetchCompanies();
+    });
+    socket.on('selection-submitted', () => {
+      fetchCompanies();
+    });
+
+    return () => socket.disconnect();
   }, []);
 
   const fetchCompanies = async () => {
@@ -71,10 +84,44 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleGenerateLink = async (company) => {
+    try {
+      const res = await axios.post('/interview/admin/create-interview-link', { companyId: company.id }, {
+        headers: { Authorization: `Bearer ${jsCookie.get('token')}` }
+      });
+      alert(`Interview Link: http://localhost:5173${res.data.url}`);
+    } catch (err) {
+      console.error(err);
+      alert('Error generating link');
+    }
+  };
+
+  const handleApproveRound = async (company) => {
+    if (!window.confirm('Are you sure you want to approve this round?')) return;
+    try {
+      await axios.post('/interview/admin/approve-round', { companyId: company.id }, {
+        headers: { Authorization: `Bearer ${jsCookie.get('token')}` }
+      });
+      alert('Round approved and emails sent.');
+      fetchCompanies();
+    } catch (err) {
+      console.error(err);
+      alert('Error approving round');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       <nav className="bg-slate-900 shadow px-8 py-4 flex justify-between items-center text-white">
-        <h1 className="text-2xl font-bold text-white">Admin Portal</h1>
+        <div className="flex items-center gap-8">
+          <h1 className="text-2xl font-bold text-white">Admin Portal</h1>
+          <div className="hidden md:flex gap-4">
+            <Link to="/admin" className="text-white font-medium hover:text-indigo-300 transition">Companies</Link>
+            <Link to="/admin/students" className="text-slate-300 font-medium hover:text-white transition flex items-center gap-1">
+              <Users size={16} /> Students
+            </Link>
+          </div>
+        </div>
         <div className="flex items-center gap-4">
           <span className="font-medium text-slate-300">Admin</span>
           <button onClick={logout} className="text-red-400 hover:text-red-300 cursor-pointer flex items-center gap-1">
@@ -98,7 +145,7 @@ export default function AdminDashboard() {
             <input required placeholder="CTC" type="text" className="border p-2 rounded" onChange={e => setFormData({ ...formData, ctc: e.target.value })} />
             <input required placeholder="Location" type="text" className="border p-2 rounded" onChange={e => setFormData({ ...formData, location: e.target.value })} />
             <input required placeholder="Eligibility CGPA" type="number" step="0.01" className="border p-2 rounded" onChange={e => setFormData({ ...formData, eligibility_cgpa: e.target.value })} />
-            <input type="date" placeholder="Deadline" className="border p-2 rounded" onChange={e => setFormData({ ...formData, deadline: e.target.value })} />
+            <input type="date" placeholder="Deadline" className="border p-2 rounded" onChange={e => setFormData({ ...formData, deadline: (e.target.value)})} />
             <textarea required placeholder="Job Description (for AI matching)" className="border p-2 rounded md:col-span-2 h-24" onChange={e => setFormData({ ...formData, jd: e.target.value })} />
             <button type="submit" className="md:col-span-2 bg-slate-900 text-white py-2 rounded-lg font-bold cursor-pointer">Save Company</button>
           </form>
@@ -112,6 +159,8 @@ export default function AdminDashboard() {
                 <th className="p-4">Role</th>
                 <th className="p-4">CTC</th>
                 <th className="p-4">Deadline</th>
+                <th className="p-4">Round</th>
+                <th className="p-4">Status</th>
                 <th className="p-4 text-right">Action</th>
               </tr>
             </thead>
@@ -121,9 +170,30 @@ export default function AdminDashboard() {
                   <td className="p-4 font-bold text-slate-800">{c.name}</td>
                   <td className="p-4 text-slate-600">{c.role}</td>
                   <td className="p-4 text-slate-600">{c.ctc}</td>
-                  <td className="p-4 text-slate-600">{new Date(c.deadline).toLocaleDateString()}</td>
-                  <td className="p-4 text-right">
-                    <button onClick={() => handleViewApplicants(c)} className="text-indigo-600 font-medium hover:underline cursor-pointer">View Applicants</button>
+                  <td className="p-4 text-slate-600">{new Date(c.deadline).toLocaleDateString("en-GB")}</td>
+                  <td className="p-4 font-semibold text-blue-600">Round {c.current_round || 1}</td>
+                  <td className="p-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      c.status === 'PENDING_REVIEW' ? 'bg-yellow-100 text-yellow-700' :
+                      c.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                      'bg-blue-100 text-blue-700'
+                    }`}>
+                      {c.status || 'ROUND_ACTIVE'}
+                    </span>
+                  </td>
+                  <td className="p-4 text-right flex gap-3 justify-end items-center flex-wrap">
+                    <button onClick={() => handleViewApplicants(c)} className="text-slate-600 hover:text-slate-900 font-medium hover:underline cursor-pointer text-sm">View Details</button>
+                    <button onClick={() => navigate(`/admin/ranking/${c.id}`)} className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 transition cursor-pointer">
+                      <Brain size={16} /> AI Rank
+                    </button>
+                    <button onClick={() => handleGenerateLink(c)} className="bg-green-50 text-green-700 hover:bg-green-100 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 transition cursor-pointer">
+                       Link
+                    </button>
+                    {c.status === 'PENDING_REVIEW' && (
+                      <button onClick={() => handleApproveRound(c)} className="bg-yellow-500 text-white hover:bg-yellow-600 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 transition cursor-pointer animate-pulse">
+                        Approve Round
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

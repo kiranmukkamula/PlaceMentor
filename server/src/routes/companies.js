@@ -5,7 +5,7 @@ const { protect, authorize } = require('../middleware/auth');
 const router = express.Router();
 
 // Get all companies
-router.get('/', async (req, res) => {
+router.get('/', protect, async (req, res) => {
   try {
     const result = await db.query('SELECT * FROM companies');
     res.json({ success: true, companies: result.rows });

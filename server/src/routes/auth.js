@@ -6,7 +6,7 @@ const { protect } = require('../middleware/auth');
 const router = express.Router();
 
 // Register User
-router.post('/register', protect, async (req, res) => {
+router.post('/register', async (req, res) => {
   try {
     const { name, email, password, role, cgpa, branch, skills } = req.body;
 
@@ -31,7 +31,7 @@ router.post('/register', protect, async (req, res) => {
 });
 
 // Login User
-router.post('/login', protect, async (req, res) => {
+router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -58,13 +58,26 @@ router.post('/login', protect, async (req, res) => {
 router.get('/me', protect, async (req, res) => {
   try {
     const result = await db.query(
-      'SELECT id, name, email, role, cgpa, branch, skills, resumeurl FROM users WHERE id = $1',
+      'SELECT id, name, email, role, cgpa, branch, skills, resume_url FROM users WHERE id = $1',
       [req.user.id]
     );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+    const user = result.rows[0];
+
+    // Missing resume check and notification
+    if (user.role === 'STUDENT' && !user.resume_url) {
+      const notifCheck = await db.query(
+        `SELECT id FROM notifications WHERE user_id = $1 AND title = 'Resume Required' AND is_read = false`,
+        [user.id]
+      );
+      if (notifCheck.rows.length === 0) {
+        await db.query(
+          `INSERT INTO notifications (user_id, title, message) VALUES ($1, $2, $3)`,
+          [user.id, 'Resume Required', 'Please upload your resume from the Placement department. Without it, you cannot be ranked for jobs.']
+        );
+      }
     }
-    res.json({ success: true, user: result.rows[0] });
+
+    res.json({ success: true, user });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
