@@ -5,6 +5,7 @@ import { LogOut, Plus, X, Brain, Users } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import jsCookie from 'js-cookie';
 import { io } from 'socket.io-client';
+import { useRef } from 'react';
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
@@ -17,18 +18,23 @@ export default function AdminDashboard() {
   const [applicants, setApplicants] = useState([]);
   const navigate = useNavigate();
 
+  const socketRef = useRef(null);
+
   useEffect(() => {
+    socketRef.current = io(`http://${window.location.hostname}:5000`);
+    
+    socketRef.current.on('round-submitted', () => {
+      fetchCompanies();
+    });
+    socketRef.current.on('selection-submitted', () => {
+      fetchCompanies();
+    });
+
     fetchCompanies();
 
-    const socket = io('http://localhost:5000');
-    socket.on('round-submitted', () => {
-      fetchCompanies();
-    });
-    socket.on('selection-submitted', () => {
-      fetchCompanies();
-    });
-
-    return () => socket.disconnect();
+    return () => {
+      if (socketRef.current) socketRef.current.disconnect();
+    };
   }, []);
 
   const fetchCompanies = async () => {
@@ -42,6 +48,13 @@ export default function AdminDashboard() {
       });
 
       setCompanies(res.data.companies);
+      
+      // Join admin rooms for real-time updates
+      if (socketRef.current) {
+        res.data.companies.forEach(c => {
+          socketRef.current.emit('join-admin-room', c.id);
+        });
+      }
     } catch (err) {
       console.log(err.response?.data || err.message);
     }
@@ -89,7 +102,7 @@ export default function AdminDashboard() {
       const res = await axios.post('/interview/admin/create-interview-link', { companyId: company.id }, {
         headers: { Authorization: `Bearer ${jsCookie.get('token')}` }
       });
-      alert(`Interview Link: http://localhost:5173${res.data.url}`);
+      alert(`Interview Link: ${window.location.origin}${res.data.url}`);
     } catch (err) {
       console.error(err);
       alert('Error generating link');
@@ -189,11 +202,17 @@ export default function AdminDashboard() {
                     <button onClick={() => handleGenerateLink(c)} className="bg-green-50 text-green-700 hover:bg-green-100 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 transition cursor-pointer">
                        Link
                     </button>
-                    {c.status === 'PENDING_REVIEW' && (
-                      <button onClick={() => handleApproveRound(c)} className="bg-yellow-500 text-white hover:bg-yellow-600 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 transition cursor-pointer animate-pulse">
-                        Approve Round
-                      </button>
-                    )}
+                    <button 
+                      onClick={() => c.status === 'PENDING_REVIEW' && handleApproveRound(c)} 
+                      disabled={c.status !== 'PENDING_REVIEW'}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 transition ${
+                        c.status === 'PENDING_REVIEW' 
+                          ? 'bg-yellow-500 text-white hover:bg-yellow-600 animate-pulse cursor-pointer shadow-md' 
+                          : 'bg-slate-100 text-slate-400 cursor-not-allowed opacity-60'
+                      }`}
+                    >
+                      Approve Round
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -224,8 +243,7 @@ export default function AdminDashboard() {
                       <th className="p-4">Branch</th>
                       <th className="p-4">CGPA</th>
                       <th className="p-4">Resume</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4">Action</th>
+                      <th className="p-4">Status / Round</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -245,25 +263,29 @@ export default function AdminDashboard() {
                           )}
                         </td>
                         <td className="p-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            app.status === 'SELECTED' ? 'bg-green-100 text-green-700' :
-                            app.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
-                            app.status === 'SHORTLISTED' ? 'bg-blue-100 text-blue-700' :
-                            'bg-yellow-100 text-yellow-700'
-                          }`}>
-                            {app.status}
-                          </span>
-                        </td>
-                        <td className="p-4">
-                          <select 
-                            value={app.status} 
-                            onChange={(e) => handleUpdateStatus(app.id, e.target.value)}
-                            className="border border-slate-200 rounded p-1 text-sm bg-white cursor-pointer">
-                            <option value="APPLIED">Applied</option>
-                            <option value="SHORTLISTED">Shortlisted</option>
-                            <option value="SELECTED">Selected</option>
-                            <option value="REJECTED">Rejected</option>
-                          </select>
+                          {app.latest_interview ? (
+                            <div className="flex flex-col gap-1">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium w-fit ${
+                                app.latest_interview.decision === 'SELECTED' ? 'bg-green-100 text-green-700' :
+                                app.latest_interview.decision === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                                'bg-blue-100 text-blue-700'
+                              }`}>
+                                {app.latest_interview.decision === 'NEXT_ROUND' ? 'Advanced' : app.latest_interview.decision}
+                              </span>
+                              <span className="text-xs text-slate-500 font-semibold">
+                                Round {app.latest_interview.round_number}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              app.status === 'SELECTED' ? 'bg-green-100 text-green-700' :
+                              app.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                              app.status === 'SHORTLISTED' ? 'bg-blue-100 text-blue-700' :
+                              'bg-yellow-100 text-yellow-700'
+                            }`}>
+                              {app.status}
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}

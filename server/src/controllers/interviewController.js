@@ -190,11 +190,38 @@ exports.approveRound = async (req, res) => {
       await client.query('UPDATE companies SET current_round = current_round + 1, status = $1 WHERE id = $2', ['ROUND_ACTIVE', companyId]);
       
       const studentsRes = await client.query(`
-        SELECT u.email, u.name FROM interview_results r JOIN users u ON r.student_id = u.id
+        SELECT u.id, u.name, c.name as company_name 
+        FROM interview_results r 
+        JOIN users u ON r.student_id = u.id
+        JOIN companies c ON r.company_id = c.id
         WHERE r.company_id = $1 AND r.round_number = $2 AND r.decision = 'NEXT_ROUND'
       `, [companyId, current_round]);
       
-      emailService.sendNextRoundEmail(studentsRes.rows);
+      for (const student of studentsRes.rows) {
+        await client.query(
+          'INSERT INTO notifications (user_id, title, message) VALUES ($1, $2, $3)',
+          [student.id, 'Cleared Interview Round', `Congratulations ${student.name}! You have cleared Round ${current_round} for ${student.company_name} and advanced to the next round.`]
+        );
+      }
+      
+      const rejectedRes = await client.query(`
+        SELECT u.id, u.name, c.name as company_name 
+        FROM interview_results r 
+        JOIN users u ON r.student_id = u.id
+        JOIN companies c ON r.company_id = c.id
+        WHERE r.company_id = $1 AND r.round_number = $2 AND r.decision = 'REJECTED'
+      `, [companyId, current_round]);
+
+      for (const student of rejectedRes.rows) {
+        await client.query(
+          'INSERT INTO notifications (user_id, title, message) VALUES ($1, $2, $3)',
+          [student.id, 'Interview Update', `Thank you for participating, ${student.name}. Unfortunately, you have not been shortlisted by <strong>${student.company_name}</strong> after <strong>Round ${current_round}</strong>.`]
+        );
+        await client.query(
+          'UPDATE applications SET status = $1 WHERE student_id = $2 AND company_id = $3',
+          ['REJECTED', student.id, companyId]
+        );
+      }
       
       if (token) req.io.to(`interview-${token}`).emit('next-round-started');
       
@@ -202,11 +229,43 @@ exports.approveRound = async (req, res) => {
       await client.query('UPDATE companies SET status = $1 WHERE id = $2', ['COMPLETED', companyId]);
       
       const studentsRes = await client.query(`
-        SELECT u.email, u.name FROM interview_results r JOIN users u ON r.student_id = u.id
+        SELECT u.id, u.name, c.name as company_name 
+        FROM interview_results r 
+        JOIN users u ON r.student_id = u.id
+        JOIN companies c ON r.company_id = c.id
         WHERE r.company_id = $1 AND r.round_number = $2 AND r.decision = 'SELECTED'
       `, [companyId, current_round]);
       
-      emailService.sendFinalSelectionEmail(studentsRes.rows);
+      for (const student of studentsRes.rows) {
+        await client.query(
+          'INSERT INTO notifications (user_id, title, message) VALUES ($1, $2, $3)',
+          [student.id, 'Final Selection', `Congratulations ${student.name}! You have been selected by ${student.company_name} in the final round.`]
+        );
+        
+        await client.query(
+          'UPDATE applications SET status = $1 WHERE student_id = $2 AND company_id = $3',
+          ['SELECTED', student.id, companyId]
+        );
+      }
+
+      const rejectedRes = await client.query(`
+        SELECT u.id, u.name, c.name as company_name 
+        FROM interview_results r 
+        JOIN users u ON r.student_id = u.id
+        JOIN companies c ON r.company_id = c.id
+        WHERE r.company_id = $1 AND r.round_number = $2 AND r.decision = 'REJECTED'
+      `, [companyId, current_round]);
+
+      for (const student of rejectedRes.rows) {
+        await client.query(
+          'INSERT INTO notifications (user_id, title, message) VALUES ($1, $2, $3)',
+          [student.id, 'Interview Update', `Thank you for participating, ${student.name}. Unfortunately, you have not been selected for the final position by <strong>${student.company_name}</strong> after the <strong>Final Round (Round ${current_round})</strong>.`]
+        );
+        await client.query(
+          'UPDATE applications SET status = $1 WHERE student_id = $2 AND company_id = $3',
+          ['REJECTED', student.id, companyId]
+        );
+      }
       
       if (token) req.io.to(`interview-${token}`).emit('hiring-completed');
     }

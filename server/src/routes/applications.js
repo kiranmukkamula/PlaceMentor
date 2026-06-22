@@ -68,9 +68,16 @@ router.get('/me', protect, authorize('STUDENT'), async (req, res) => {
 router.get('/company/:id', protect, authorize('ADMIN'), async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT a.*, a.student_id AS "studentId", a.company_id AS "companyId", a.applied_at AS "appliedAt", json_build_object(
+      `SELECT a.*, a.student_id AS "studentId", a.company_id AS "companyId", a.applied_at AS "appliedAt", 
+       json_build_object(
          'id', u.id, 'name', u.name, 'email', u.email, 'cgpa', u.cgpa, 'branch', u.branch, 'resumeUrl', u.resume_url, 'skills', u.skills
-       ) as student
+       ) as student,
+       (
+         SELECT json_build_object('round_number', r.round_number, 'decision', r.decision)
+         FROM interview_results r
+         WHERE r.student_id = a.student_id AND r.company_id = a.company_id
+         ORDER BY r.round_number DESC LIMIT 1
+       ) as latest_interview
        FROM applications a
        JOIN users u ON a.student_id = u.id
        WHERE a.company_id = $1 ORDER BY a.applied_at DESC`,

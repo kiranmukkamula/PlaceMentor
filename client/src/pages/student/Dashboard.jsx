@@ -13,10 +13,30 @@ export default function StudentDashboard() {
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
     fetchData();
+    fetchNotifications();
   }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await axios.get('/auth/me/notifications');
+      setNotifications(res.data.notifications || []);
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err);
+    }
+  };
+
+  const handleMarkRead = async (id) => {
+    try {
+      await axios.put(`/auth/me/notifications/${id}/read`);
+      setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n));
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -88,29 +108,35 @@ export default function StudentDashboard() {
         <div className="flex items-center gap-4">
           <span className="font-medium text-slate-700">Hi, {user?.name}</span>
           
-          {/* Notification Bell */}
           <div className="relative">
             <button onClick={() => setShowNotifications(!showNotifications)} className="text-slate-500 hover:text-indigo-600 transition cursor-pointer relative p-1">
               <Bell size={20} />
-              {!user?.resume_url && (
+              {notifications.some(n => !n.is_read) && (
                 <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
               )}
             </button>
 
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
-                <div className="p-4 border-b border-slate-100 bg-slate-50 font-bold text-slate-800">Notifications</div>
+                <div className="p-4 border-b border-slate-100 bg-slate-50 font-bold text-slate-800 flex justify-between items-center">
+                  Notifications
+                </div>
                 <div className="max-h-64 overflow-y-auto">
-                  {!user?.resume_url ? (
-                    <div className="p-4 flex gap-3 hover:bg-slate-50 transition border-b border-slate-100">
-                      <AlertCircle className="text-red-500 shrink-0" size={20} />
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-800">Resume Required</h4>
-                        <p className="text-xs text-slate-600 mt-1">Please upload your resume from the Placement department. Without it, you cannot be ranked for jobs.</p>
-                      </div>
-                    </div>
-                  ) : (
+                  {notifications.length === 0 ? (
                     <div className="p-6 text-center text-slate-500 text-sm">No new notifications</div>
+                  ) : (
+                    notifications.map(n => (
+                      <div key={n.id} onClick={() => !n.is_read && handleMarkRead(n.id)} className={`p-4 flex gap-3 transition border-b border-slate-100 cursor-pointer ${n.is_read ? 'bg-white opacity-60' : 'bg-slate-50 hover:bg-slate-100'}`}>
+                        <div className="mt-1">
+                           {n.title.includes('Resume') ? <AlertCircle className="text-red-500" size={16} /> : <Bell className="text-indigo-500" size={16} />}
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-800">{n.title}</h4>
+                          <p className="text-xs text-slate-600 mt-1" dangerouslySetInnerHTML={{ __html: n.message }}></p>
+                          <span className="text-[10px] text-slate-400 mt-2 block">{new Date(n.created_at).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>

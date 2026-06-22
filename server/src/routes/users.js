@@ -13,11 +13,10 @@ router.get('/students', protect, authorize('ADMIN'), async (req, res) => {
       SELECT 
         u.id, u.name, u.email, u.cgpa, u.branch, u.resume_url,
         (
-          SELECT c.name 
+          SELECT string_agg(c.name, ',') 
           FROM applications a 
           JOIN companies c ON a.company_id = c.id 
-          WHERE a.student_id = u.id AND a.status = 'SELECTED' 
-          LIMIT 1
+          WHERE a.student_id = u.id AND a.status = 'SELECTED'
         ) as selected_company
       FROM users u
       WHERE u.role = 'STUDENT'

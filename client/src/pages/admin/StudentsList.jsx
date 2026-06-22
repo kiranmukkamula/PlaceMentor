@@ -111,9 +111,13 @@ export default function StudentsList() {
                     </td>
                     <td className="p-4">
                       {student.selected_company ? (
-                        <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-200">
-                          Placed: {student.selected_company}
-                        </span>
+                        <div className="flex flex-wrap gap-2">
+                          {student.selected_company.split(',').map((comp, idx) => (
+                            <span key={idx} className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-200">
+                              Placed: {comp.trim()}
+                            </span>
+                          ))}
+                        </div>
                       ) : (
                         <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-medium">
                           Not Yet
