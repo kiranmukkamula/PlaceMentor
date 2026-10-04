@@ -8,9 +8,11 @@ export default function StudentDashboard() {
   const [companies, setCompanies] = useState([]);
   const [applications, setApplications] = useState([]);
   const [resumeFile, setResumeFile] = useState(null);
-  const [analysis, setAnalysis] = useState(null);
-  const [loadingAnalysis, setLoadingAnalysis] = useState(false);
-  const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [experiences, setExperiences] = useState([]);
+  const [showExpModal, setShowExpModal] = useState(false);
+  const [expCompanyId, setExpCompanyId] = useState('');
+  const [expContent, setExpContent] = useState('');
+  const [selectedFilterCompany, setSelectedFilterCompany] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -52,6 +54,13 @@ export default function StudentDashboard() {
     } catch (err) {
       console.error("Failed to fetch applications (expected if bypassing auth):", err);
     }
+
+    try {
+      const expRes = await axios.get('/experiences');
+      setExperiences(expRes.data.experiences || []);
+    } catch (err) {
+      console.error("Failed to fetch experiences:", err);
+    }
   };
 
   const handleUpload = async (e) => {
@@ -70,23 +79,17 @@ export default function StudentDashboard() {
     }
   };
 
-  const handleAnalyze = async () => {
-    if (!selectedCompanyId) return alert('Select a company to analyze against');
-    setLoadingAnalysis(true);
-    setAnalysis(null);
+  const handlePostExperience = async (e) => {
+    e.preventDefault();
+    if (!expCompanyId || !expContent.trim()) return alert('Please select a company and write your experience.');
     try {
-      // Need resumedText, assuming we have a manual fallback or server saved it in context (we didn't save text in DB, so we would normally parse on upload and keep it, but for simplicity of this demo, we can just use the parser again or expect text).
-      // Wait, our backend /analyze expects `resumeText`. Since we didn't save the parsedText in the User DB from upload, we either need a textarea for fallback or just pass a mock string for now if PDF parse isn't fully connected on the frontend state.
-      alert('In a full app, this would use the parsed text from your uploaded PDF and send to Gemini. Ensure you provide a Resume Text or upload PDF logic.');
-      const res = await axios.post('/resume/analyze', {
-        companyId: selectedCompanyId,
-        resumeText: "Experienced Software Engineer with knowledge in React, Node, SQL..." // Mock fallback
-      });
-      setAnalysis(res.data.analysis);
+      await axios.post('/experiences', { companyId: expCompanyId, content: expContent });
+      alert('Experience posted successfully!');
+      setExpContent('');
+      setShowExpModal(false);
+      fetchData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Analysis failed. Did you add the GEMINI_API_KEY?');
-    } finally {
-      setLoadingAnalysis(false);
+      alert(err.response?.data?.message || 'Failed to post experience');
     }
   };
 
@@ -219,45 +222,78 @@ export default function StudentDashboard() {
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-6 border border-indigo-100 border-t-4 border-t-indigo-500">
-            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-              ✨ AI JD Analyzer
-            </h3>
-            <p className="text-sm text-slate-600 mb-4">Check how well your resume matches a target company.</p>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                💡 Interview Experiences
+              </h3>
+              <button onClick={() => setShowExpModal(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer">
+                + Share Mine
+              </button>
+            </div>
+            <p className="text-sm text-slate-600 mb-4">Read real interview questions and prep tips from peers.</p>
 
-            <select className="w-full border border-slate-200 rounded-lg p-3 text-sm text-slate-700 mb-4" onChange={e => setSelectedCompanyId(e.target.value)} value={selectedCompanyId}>
-              <option value="">Select a company...</option>
+            <select className="w-full border border-slate-200 rounded-lg p-2.5 text-sm text-slate-700 mb-4 cursor-pointer" onChange={e => setSelectedFilterCompany(e.target.value)} value={selectedFilterCompany}>
+              <option value="">All Companies ({experiences.length})</option>
               {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
 
-            <button onClick={handleAnalyze} disabled={loadingAnalysis} className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 cursor-pointer disabled:opacity-50">
-              {loadingAnalysis ? 'Analyzing...' : 'Analyze Match'}
-            </button>
-
-            {analysis && (
-              <div className="mt-6 p-4 bg-slate-50 rounded-lg text-sm border border-slate-200">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="text-2xl font-bold text-indigo-600">{analysis.matchScore}%</div>
-                  <div className="text-slate-600 font-medium">Match</div>
-                </div>
-                <div className="space-y-3 mt-4">
-                  <div>
-                    <strong className="text-red-500">Missing Keywords:</strong>
-                    <p className="text-slate-700">{analysis.missingKeywords?.join(', ') || 'None'}</p>
-                  </div>
-                  <div>
-                    <strong className="text-green-600">Suggested Skills:</strong>
-                    <p className="text-slate-700">{analysis.skillsToAdd?.join(', ') || 'None'}</p>
-                  </div>
-                  <div className="pt-2 border-t border-slate-200">
-                    <p className="text-slate-800 italic">"{analysis.suggestions}"</p>
-                  </div>
-                </div>
-              </div>
-            )}
+            <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
+              {experiences
+                .filter(e => !selectedFilterCompany || e.companyId.toString() === selectedFilterCompany.toString())
+                .length === 0 ? (
+                <div className="text-center py-6 text-slate-400 text-sm">No experiences posted yet. Be the first to share!</div>
+              ) : (
+                experiences
+                  .filter(e => !selectedFilterCompany || e.companyId.toString() === selectedFilterCompany.toString())
+                  .map(exp => (
+                    <div key={exp.id} className="p-4 bg-slate-50 rounded-xl border border-slate-200/80 text-sm space-y-2">
+                      <div className="flex justify-between items-start">
+                        <span className="font-bold text-indigo-700">{exp.companyName}</span>
+                        <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-medium">{exp.companyRole || 'Drive'}</span>
+                      </div>
+                      <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">{exp.content}</p>
+                      <div className="text-[11px] text-slate-400 pt-1 border-t border-slate-200 flex justify-between">
+                        <span>By: {exp.studentName}</span>
+                        <span>{exp.studentBranch || 'Student'}</span>
+                      </div>
+                    </div>
+                  ))
+              )}
+            </div>
           </div>
         </div>
 
       </div>
+
+      {/* Post Experience Modal */}
+      {showExpModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+              <h2 className="text-xl font-bold text-slate-800">Share Interview Experience</h2>
+              <button onClick={() => setShowExpModal(false)} className="text-slate-500 hover:text-slate-700 cursor-pointer">
+                <X size={24} />
+              </button>
+            </div>
+            <form onSubmit={handlePostExperience} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Company</label>
+                <select required className="w-full border border-slate-200 rounded-lg p-2.5 text-sm text-slate-700" value={expCompanyId} onChange={e => setExpCompanyId(e.target.value)}>
+                  <option value="">Select Company...</option>
+                  {companies.map(c => <option key={c.id} value={c.id}>{c.name} - {c.role}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Experience & Questions Asked</label>
+                <textarea required rows="5" placeholder="Describe the interview rounds, technical questions (DSA, DBMS, etc.), and HR questions..." className="w-full border border-slate-200 rounded-lg p-3 text-sm text-slate-700" value={expContent} onChange={e => setExpContent(e.target.value)}></textarea>
+              </div>
+              <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg font-bold transition cursor-pointer">
+                Post Experience
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* History Modal */}
       {showHistory && (

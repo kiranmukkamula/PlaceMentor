@@ -1,9 +1,23 @@
 const { Pool } = require('pg');
+
+
 require('dotenv').config();
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+if (!process.env.DATABASE_URL && !process.env.DB_PASSWORD) {
+  console.warn("⚠️ WARNING: DATABASE_URL is not set in server/.env file. Using default connection parameters.");
+}
+
+const poolConfig = process.env.DATABASE_URL
+  ? { connectionString: process.env.DATABASE_URL }
+  : {
+    user: process.env.DB_USER || 'postgres',
+    host: process.env.DB_HOST || 'localhost',
+    database: process.env.DB_NAME || 'placement_portal',
+    password: String(process.env.DB_PASSWORD || ''),
+    port: parseInt(process.env.DB_PORT || '5432', 10),
+  };
+
+const pool = new Pool(poolConfig);
 
 // Test connection on startup
 pool.connect((err, client, release) => {

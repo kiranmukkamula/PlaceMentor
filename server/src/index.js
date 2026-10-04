@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const express = require('express');
 const cors = require('cors');
 
@@ -8,6 +9,7 @@ const applicationRoutes = require('./routes/applications');
 const resumeRoutes = require('./routes/resume');
 const rankingRoutes = require('./routes/ranking');
 const usersRoutes = require('./routes/users');
+const experiencesRoutes = require('./routes/experiences');
 
 const http = require('http');
 const { Server } = require('socket.io');
@@ -61,6 +63,7 @@ app.use('/api/applications', applicationRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/ranking', rankingRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/experiences', experiencesRoutes);
 
 const interviewRoutes = require('./routes/interview');
 app.use('/api/interview', interviewRoutes);

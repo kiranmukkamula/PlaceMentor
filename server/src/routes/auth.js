@@ -22,10 +22,11 @@ router.post('/register', async (req, res) => {
     );
 
     const user = result.rows[0];
-    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'placementor_secret_jwt_key', { expiresIn: '30d' });
 
     res.status(201).json({ success: true, user, token });
   } catch (error) {
+    console.error("❌ Register error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -46,10 +47,11 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'placementor_secret_jwt_key', { expiresIn: '30d' });
 
     res.json({ success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role }, token });
   } catch (error) {
+    console.error("❌ Login error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

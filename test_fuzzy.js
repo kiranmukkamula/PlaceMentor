@@ -11,3 +11,4 @@ console.log(`JaroWinklerDistance(${w3}, ${w4}) =`, natural.JaroWinklerDistance(w
 const w5 = "javascipt";
 const w6 = "javascript";
 console.log(`JaroWinklerDistance(${w5}, ${w6}) =`, natural.JaroWinklerDistance(w5, w6));
+

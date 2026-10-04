@@ -12,7 +12,7 @@ const protect = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'placementor_secret_jwt_key');
     req.user = decoded; // { id, role }
     next();
   } catch (error) {

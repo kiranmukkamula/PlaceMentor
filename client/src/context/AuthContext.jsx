@@ -46,6 +46,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const res = await axios.post('/auth/login', { email, password });
+    console.log(res);
     jsCookie.set('token', res.data.token, { expires: 30 });
     setUser(res.data.user);
     return res.data.user;
