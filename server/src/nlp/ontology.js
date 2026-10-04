@@ -1,8 +1,30 @@
 /**
  * Dictionary for normalizing technical skill variants into a single canonical form.
- * Solves: k8s -> kubernetes, js -> javascript, node -> nodejs
+ * Solves: k8s -> kubernetes, js -> javascript, node -> nodejs, oops -> object oriented programming
  */
 const skillNormalization = {
+  // CS Fundamentals & Core Concepts
+  'os': 'operating systems',
+  'operating system': 'operating systems',
+  'cn': 'computer networks',
+  'networking': 'computer networks',
+  'computer network': 'computer networks',
+  'oop': 'object oriented programming',
+  'oops': 'object oriented programming',
+  'object oriented': 'object oriented programming',
+  'dbms': 'dbms',
+  'rdbms': 'dbms',
+  'cs fundamentals': 'cs fundamentals',
+  'computer science fundamentals': 'cs fundamentals',
+  'cs core': 'cs fundamentals',
+  'core cs': 'cs fundamentals',
+  'development skills': 'development skills',
+  'software development': 'development skills',
+  'web development': 'web development',
+  'dev skills': 'development skills',
+  'dev': 'development skills',
+  'system design': 'system design',
+  
   // Languages
   'js': 'javascript',
   'ts': 'typescript',
@@ -10,6 +32,7 @@ const skillNormalization = {
   'cpp': 'c++',
   'c#': 'csharp',
   'go': 'golang',
+  
   // Frameworks/Libraries
   'node': 'nodejs',
   'react': 'reactjs',
@@ -41,10 +64,73 @@ const skillNormalization = {
 };
 
 /**
+ * Macro concepts mapping to their constituent micro-skills.
+ * Allows JD requirements like "CS Fundamentals" or "Development Skills" to map to actual candidate skills.
+ */
+const conceptExpansion = {
+  'cs fundamentals': [
+    'operating systems', 
+    'computer networks', 
+    'object oriented programming', 
+    'dbms', 
+    'database', 
+    'data structures and algorithms', 
+    'data structures', 
+    'algorithms',
+    'system design'
+  ],
+  'development skills': [
+    'web development', 
+    'javascript', 
+    'reactjs', 
+    'nodejs', 
+    'express', 
+    'python', 
+    'java', 
+    'html', 
+    'css', 
+    'api', 
+    'database', 
+    'sql', 
+    'git'
+  ],
+  'web development': [
+    'javascript', 
+    'reactjs', 
+    'nodejs', 
+    'express', 
+    'html', 
+    'css', 
+    'api', 
+    'tailwind'
+  ],
+  'full stack': [
+    'javascript', 
+    'reactjs', 
+    'nodejs', 
+    'express', 
+    'mongodb', 
+    'postgresql', 
+    'html', 
+    'css', 
+    'api', 
+    'database'
+  ]
+};
+
+/**
  * Maps canonical skills to broader technical domains for context-aware matching.
- * This ensures that a backend requirement matches a backend skill set.
  */
 const domainOntology = {
+  cs_fundamentals: [
+    'operating systems', 'computer networks', 'object oriented programming',
+    'dbms', 'data structures and algorithms', 'data structures', 'algorithms',
+    'system design', 'cs fundamentals', 'leetcode', 'codeforces'
+  ],
+  development: [
+    'development skills', 'web development', 'javascript', 'typescript', 'reactjs',
+    'nodejs', 'express', 'python', 'java', 'html', 'css', 'api', 'full stack'
+  ],
   backend: [
     'nodejs', 'express', 'python', 'django', 'flask', 'fastapi',
     'java', 'spring', 'springboot', 'csharp', 'dotnet', 'golang',
@@ -57,7 +143,7 @@ const domainOntology = {
   ],
   database: [
     'postgresql', 'mysql', 'mongodb', 'redis', 'sqlite',
-    'oracle', 'sql server', 'cassandra', 'dynamodb', 'elasticsearch', 'sql', 'nosql'
+    'oracle', 'sql server', 'cassandra', 'dynamodb', 'elasticsearch', 'sql', 'nosql', 'dbms', 'database'
   ],
   devops: [
     'docker', 'kubernetes', 'jenkins', 'github actions', 'gitlab ci',
@@ -95,6 +181,21 @@ function normalizeSkill(rawSkill) {
 }
 
 /**
+ * Expands a set of normalized skills using macro concept definitions.
+ * E.g. "cs fundamentals" -> adds ["operating systems", "computer networks", "object oriented programming", "dbms", "dsa"]
+ */
+function expandMacroSkills(skills = []) {
+  const expanded = new Set(skills);
+  skills.forEach(skill => {
+    const canonical = normalizeSkill(skill);
+    if (conceptExpansion[canonical]) {
+      conceptExpansion[canonical].forEach(microSkill => expanded.add(microSkill));
+    }
+  });
+  return Array.from(expanded);
+}
+
+/**
  * Classifies an array of canonical skills into domains.
  * @param {Array<string>} skills 
  * @returns {Array<string>} List of unique matched domains
@@ -115,7 +216,9 @@ function getDomainsForSkills(skills) {
 
 module.exports = {
   skillNormalization,
+  conceptExpansion,
   domainOntology,
   normalizeSkill,
+  expandMacroSkills,
   getDomainsForSkills
 };

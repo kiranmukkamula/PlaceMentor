@@ -1,4 +1,4 @@
-const { normalizeSkill, getDomainsForSkills, skillNormalization, domainOntology } = require('./ontology');
+const { normalizeSkill, getDomainsForSkills, skillNormalization, domainOntology, expandMacroSkills } = require('./ontology');
 const natural = require('natural');
 
 /**
@@ -61,10 +61,10 @@ function extractSections(text) {
  * Includes Fuzzy Matching to handle typos like "numspy" or "pands".
  * 
  * @param {string} text The block of text to analyze
- * @returns {Object} Extracted skills, normalized skills, and associated domains
+ * @returns {Object} Extracted skills, normalized skills, expanded skills, and associated domains
  */
 function extractTechnicalEntities(text) {
-  if (!text) return { explicitSkills: [], normalizedSkills: [], domains: [] };
+  if (!text) return { explicitSkills: [], normalizedSkills: [], expandedSkills: [], domains: [] };
 
   const lowerText = text.toLowerCase().replace(/[\n\t]/g, ' ');
   
@@ -81,7 +81,18 @@ function extractTechnicalEntities(text) {
   let explicitSkills = new Set();
   let normalizedSkills = new Set();
 
-  // 2. Exact Phrase matching (NER)
+  // 2. Direct regex heuristics for high-level placement JD terms
+  if (/cs fundamentals|computer science fundamentals|core cs|cs core/i.test(lowerText)) {
+    explicitSkills.add('cs fundamentals');
+    normalizedSkills.add('cs fundamentals');
+  }
+
+  if (/development skills|software development|web development|dev skills|development/i.test(lowerText)) {
+    explicitSkills.add('development skills');
+    normalizedSkills.add('development skills');
+  }
+
+  // 3. Exact Phrase matching (NER)
   sortedPhrases.forEach(phrase => {
     const escapedPhrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`(^|\\s|[.,;()/-])${escapedPhrase}(\\s|[.,;()/-]|$)`, 'gi');
@@ -90,26 +101,21 @@ function extractTechnicalEntities(text) {
       explicitSkills.add(phrase);
       const canonical = normalizeSkill(phrase);
       normalizedSkills.add(canonical);
-      // Remove matched phrase from text so we don't fuzzy match its sub-parts later
-      // But we just replace it with spaces
     }
   });
 
-  // 3. Fuzzy Matching (Typo Tolerance)
-  // Split remaining text into raw tokens (words) to check for slight misspellings
+  // 4. Fuzzy Matching (Typo Tolerance)
   const rawTokens = lowerText.split(/[\s.,;()/-]+/);
   
   rawTokens.forEach(token => {
     if (token.length > 3) {
-      // Don't process tokens already found
       if (!explicitSkills.has(token) && !normalizedSkills.has(normalizeSkill(token))) {
         
         let bestMatch = null;
         let highestScore = 0;
 
-        // Compare against single-word canonical skills (to keep it fast and accurate)
         Array.from(allKnownPhrases).forEach(knownSkill => {
-          if (!knownSkill.includes(' ')) { // Only fuzzy match single words to prevent weird cross-phrase matching
+          if (!knownSkill.includes(' ')) {
             const score = natural.JaroWinklerDistance(token, knownSkill);
             if (score > highestScore) {
               highestScore = score;
@@ -118,22 +124,24 @@ function extractTechnicalEntities(text) {
           }
         });
 
-        // 0.92 is a highly reliable threshold for Jaro-Winkler. 
-        // e.g. "numspy" & "numpy" = 0.96. "pands" & "pandas" = 0.96.
         if (highestScore > 0.92 && bestMatch) {
-          explicitSkills.add(token); // Add the typo version as explicit
-          normalizedSkills.add(normalizeSkill(bestMatch)); // Map it to correct canonical
+          explicitSkills.add(token);
+          normalizedSkills.add(normalizeSkill(bestMatch));
         }
       }
     }
   });
 
-  // 4. Extract Domains
-  const domains = getDomainsForSkills(Array.from(normalizedSkills));
+  const normalizedArr = Array.from(normalizedSkills);
+  const expandedArr = expandMacroSkills(normalizedArr);
+
+  // 5. Extract Domains
+  const domains = getDomainsForSkills(expandedArr);
 
   return {
     explicitSkills: Array.from(explicitSkills),
-    normalizedSkills: Array.from(normalizedSkills),
+    normalizedSkills: normalizedArr,
+    expandedSkills: expandedArr,
     domains
   };
 }
@@ -142,3 +150,4 @@ module.exports = {
   extractSections,
   extractTechnicalEntities
 };
+

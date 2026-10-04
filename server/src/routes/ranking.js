@@ -76,6 +76,10 @@ router.post('/analyze/:companyId', protect, authorize('ADMIN'), async (req, res)
       };
 
       const resumeEntities = parsedData.entities || { explicitSkills: [], normalizedSkills: [], domains: [] };
+      if (!resumeEntities.expandedSkills && resumeEntities.normalizedSkills) {
+        const { expandMacroSkills } = require('../nlp/ontology');
+        resumeEntities.expandedSkills = expandMacroSkills(resumeEntities.normalizedSkills);
+      }
       const resumeSections = parsedData.sections || {};
 
       // 6. Compute Hybrid Contextual Score

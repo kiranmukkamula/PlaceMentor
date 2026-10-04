@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { io } from 'socket.io-client';
+import { CheckCircle2, ShieldAlert, Sparkles, Building2, UserCheck, Clock } from 'lucide-react';
 
 const API_URL = `http://${window.location.hostname}:5000/api`;
 const SOCKET_URL = `http://${window.location.hostname}:5000`;
@@ -25,7 +26,7 @@ const InterviewPortal = () => {
         setPortalState(res.data.state);
         setCompany(res.data.company);
         if (res.data.students) setStudents(res.data.students);
-        setSelectedStudents(new Set()); // Reset selections
+        setSelectedStudents(new Set());
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Error loading interview state');
@@ -86,18 +87,21 @@ const InterviewPortal = () => {
 
   if (portalState === 'LOADING' || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-xl font-semibold text-gray-600 animate-pulse">Loading Interview Portal...</div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-sm font-bold text-slate-600 animate-pulse flex items-center gap-2">
+          <Sparkles className="text-emerald-600 animate-spin" size={20} /> Loading Interview Portal...
+        </div>
       </div>
     );
   }
 
   if (portalState === 'ERROR') {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <div className="bg-red-50 text-red-600 p-6 rounded-lg shadow-md max-w-md w-full text-center">
-          <h2 className="text-2xl font-bold mb-2">Error</h2>
-          <p>{error}</p>
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <div className="bg-rose-50 text-rose-700 border border-rose-200 p-8 rounded-3xl shadow-xl max-w-md w-full text-center">
+          <ShieldAlert size={48} className="mx-auto text-rose-600 mb-3" />
+          <h2 className="text-2xl font-black mb-2">Access Error</h2>
+          <p className="text-sm">{error}</p>
         </div>
       </div>
     );
@@ -105,11 +109,14 @@ const InterviewPortal = () => {
 
   if (portalState === 'COMPLETED') {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center border-t-4 border-green-500">
-          <h1 className="text-3xl font-bold text-gray-800 mb-4">Hiring Process Completed</h1>
-          <p className="text-gray-600 mb-6">Selected Candidates Finalized.</p>
-          <p className="text-green-600 font-semibold text-xl">Thank You!</p>
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <div className="bg-white p-10 rounded-3xl shadow-xl shadow-emerald-950/5 max-w-md w-full text-center border border-emerald-200">
+          <CheckCircle2 size={56} className="mx-auto text-emerald-600 mb-4" />
+          <h1 className="text-3xl font-black text-slate-900 mb-2">Hiring Process Completed</h1>
+          <p className="text-slate-600 text-sm mb-6">Selected Candidates Finalized for {company?.name}.</p>
+          <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold px-4 py-2 rounded-full text-sm">
+            Thank You for Partnering!
+          </span>
         </div>
       </div>
     );
@@ -117,79 +124,93 @@ const InterviewPortal = () => {
 
   if (portalState === 'LOCKED') {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center border-t-4 border-yellow-500">
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <div className="bg-white p-10 rounded-3xl shadow-xl max-w-md w-full text-center border border-amber-200">
           <div className="mb-6 flex justify-center">
-             <div className="w-16 h-16 border-4 border-yellow-200 border-t-yellow-500 rounded-full animate-spin"></div>
+             <div className="w-16 h-16 border-4 border-amber-200 border-t-amber-500 rounded-full animate-spin"></div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Results submitted successfully.</h2>
-          <p className="text-gray-600">Waiting for Placement Cell authorization to unlock the next round...</p>
+          <h2 className="text-2xl font-black text-slate-900 mb-2">Round Submitted</h2>
+          <p className="text-slate-600 text-sm">Waiting for Placement Cell authorization to unlock the next round...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
-      {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10 px-4 py-4 md:px-8 border-b border-gray-200">
+    <div className="min-h-screen bg-slate-50 pb-28 selection:bg-emerald-100 selection:text-emerald-900">
+      {/* Luxury White Header */}
+      <div className="bg-white/95 backdrop-blur-md shadow-xs sticky top-0 z-20 px-6 py-4 border-b border-emerald-900/10">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{company?.name}</h1>
-            <p className="text-sm text-gray-500">{company?.role}</p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-black text-lg shadow-md shadow-emerald-600/20">
+              {company?.name?.charAt(0) || 'C'}
+            </div>
+            <div>
+              <h1 className="text-xl font-black text-slate-900">{company?.name}</h1>
+              <p className="text-xs text-slate-500">{company?.role}</p>
+            </div>
           </div>
-          <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full font-semibold text-sm">
+          <div className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-4 py-1.5 rounded-full font-bold text-xs uppercase tracking-wider">
             Round {company?.current_round}
           </div>
         </div>
       </div>
 
       {/* Candidates List */}
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <h2 className="text-lg font-semibold text-gray-700 mb-4">Candidates ({students.length})</h2>
-        <div className="space-y-4">
-          {students.map(student => (
-            <div 
-              key={student.student_id} 
-              onClick={() => toggleStudent(student.student_id)}
-              className={`bg-white p-4 rounded-xl shadow-sm border-2 cursor-pointer transition-all ${
-                selectedStudents.has(student.student_id) ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:border-gray-200'
-              } flex items-center justify-between`}
-            >
-              <div>
-                <h3 className="text-lg font-bold text-gray-800">{student.name}</h3>
-                <p className="text-sm text-gray-500">{student.branch} • CGPA: {student.cgpa}</p>
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-black text-slate-900">Round {company?.current_round} Candidates ({students.length})</h2>
+          <span className="text-xs text-slate-500 font-medium">Select candidates to advance or offer</span>
+        </div>
+
+        <div className="space-y-3">
+          {students.map(student => {
+            const isSelected = selectedStudents.has(student.student_id);
+            return (
+              <div 
+                key={student.student_id} 
+                onClick={() => toggleStudent(student.student_id)}
+                className={`bg-white p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
+                  isSelected 
+                    ? 'border-emerald-500 bg-emerald-50/50 shadow-md shadow-emerald-600/10' 
+                    : 'border-slate-200/80 hover:border-emerald-300 shadow-xs'
+                } flex items-center justify-between`}
+              >
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">{student.name}</h3>
+                  <p className="text-xs text-slate-500 mt-1">Branch: <strong className="text-slate-700">{student.branch}</strong> • CGPA: <strong className="text-emerald-700">{student.cgpa}</strong></p>
+                </div>
+                <div>
+                  <input 
+                    type="checkbox" 
+                    checked={isSelected} 
+                    readOnly
+                    className="w-6 h-6 text-emerald-600 rounded-lg focus:ring-emerald-500 border-slate-300 cursor-pointer accent-emerald-600"
+                  />
+                </div>
               </div>
-              <div>
-                <input 
-                  type="checkbox" 
-                  checked={selectedStudents.has(student.student_id)} 
-                  readOnly
-                  className="w-8 h-8 text-blue-600 rounded focus:ring-blue-500 border-gray-300 cursor-pointer"
-                />
-              </div>
-            </div>
-          ))}
+            );
+          })}
           {students.length === 0 && (
-            <div className="text-center text-gray-500 py-10">No candidates available for this round.</div>
+            <div className="text-center text-slate-400 py-16 bg-white rounded-3xl border border-slate-200/80">No candidates available for this round.</div>
           )}
         </div>
       </div>
 
-      {/* Bottom Actions */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+      {/* Bottom Floating Action Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 p-4 shadow-2xl z-30">
         <div className="max-w-4xl mx-auto flex gap-4">
           <button 
             onClick={() => handleActionClick('NEXT_ROUND')}
             disabled={students.length === 0}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-3 px-4 rounded-xl transition-colors"
+            className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 text-white font-bold py-3.5 px-4 rounded-xl shadow-md shadow-emerald-600/20 text-xs uppercase tracking-wider transition-all cursor-pointer"
           >
-            Move {selectedStudents.size} to Next Round
+            Advance {selectedStudents.size} Candidate(s) to Next Round
           </button>
           <button 
             onClick={() => handleActionClick('FINAL_SELECT')}
             disabled={students.length === 0}
-            className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-semibold py-3 px-4 rounded-xl transition-colors"
+            className="flex-1 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white font-bold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md"
           >
             Final Select ({selectedStudents.size})
           </button>
@@ -198,22 +219,22 @@ const InterviewPortal = () => {
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-sm w-full p-6 text-center">
-            <h3 className="text-xl font-bold mb-4">Confirm Submission</h3>
-            <p className="text-gray-600 mb-6">
-              You have selected {selectedStudents.size} candidate(s) for {actionType === 'NEXT_ROUND' ? 'the next round' : 'final selection'}. This action cannot be undone.
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-8 text-center border border-slate-200 shadow-2xl">
+            <h3 className="text-xl font-black text-slate-900 mb-3">Confirm Round Submission</h3>
+            <p className="text-slate-600 text-xs leading-relaxed mb-6">
+              You have selected <strong className="text-emerald-700 font-bold">{selectedStudents.size} candidate(s)</strong> for {actionType === 'NEXT_ROUND' ? 'advancement to the next round' : 'final placement selection'}.
             </p>
             <div className="flex gap-3">
               <button 
                 onClick={() => setShowConfirmModal(false)}
-                className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold rounded-lg"
+                className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
               >
                 Cancel
               </button>
               <button 
                 onClick={confirmAction}
-                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg"
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer"
               >
                 Confirm
               </button>
@@ -226,3 +247,4 @@ const InterviewPortal = () => {
 };
 
 export default InterviewPortal;
+

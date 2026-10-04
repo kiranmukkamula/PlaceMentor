@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import jsCookie from 'js-cookie';
-import { ArrowLeft, CheckCircle, XCircle, ChevronDown, ChevronUp, Brain, Star, CheckSquare } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, ChevronDown, ChevronUp, Brain, Star, CheckSquare, Award, Briefcase, Code, Layers, FileText } from 'lucide-react';
 
 export default function CandidateRanking() {
   const { companyId } = useParams();
@@ -23,8 +23,6 @@ export default function CandidateRanking() {
     setLoading(true);
     try {
       const token = jsCookie.get('token');
-      // Fetch currently ranked candidates or just fetch applicants first
-      // The analyze route actually fetches and ranks them
       const res = await axios.post(`/ranking/analyze/${companyId}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -71,10 +69,7 @@ export default function CandidateRanking() {
         headers: { Authorization: `Bearer ${token}` }
       });
       alert(`Successfully updated to ${status}`);
-      // Uncheck all after bulk action
       setSelectedIds(new Set());
-      // Re-fetch to see updated DB if needed, or simply update local state
-      // For simplicity, re-fetch:
       fetchRanking();
     } catch (err) {
       console.error(err);
@@ -84,72 +79,93 @@ export default function CandidateRanking() {
     }
   };
 
+  const getMatchTierBadge = (tier, score) => {
+    if (tier === 'Exceptional Fit' || score >= 80) {
+      return <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">Exceptional Fit</span>;
+    }
+    if (tier === 'Strong Fit' || score >= 65) {
+      return <span className="bg-indigo-100 text-indigo-800 border border-indigo-300 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">Strong Fit</span>;
+    }
+    if (tier === 'Moderate Fit' || score >= 50) {
+      return <span className="bg-amber-100 text-amber-800 border border-amber-300 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">Moderate Fit</span>;
+    }
+    return <span className="bg-slate-100 text-slate-700 border border-slate-300 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">Weak Fit</span>;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
-        <Brain className="animate-pulse text-indigo-600 mb-4" size={64} />
-        <h2 className="text-xl font-bold text-slate-700">AI is analyzing candidate resumes...</h2>
-        <p className="text-slate-500 mt-2">Computing semantic vectors and matching skills.</p>
+        <Brain className="animate-pulse text-emerald-600 mb-4" size={64} />
+        <h2 className="text-xl font-black text-slate-800">AI is analyzing candidate resumes...</h2>
+        <p className="text-slate-500 text-sm mt-2">Computing calibrated semantic vectors & section-by-section breakdown.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
-      <nav className="bg-slate-900 shadow px-8 py-4 flex items-center text-white gap-4">
-        <button onClick={() => navigate('/admin')} className="text-slate-300 hover:text-white transition">
-          <ArrowLeft />
+    <div className="min-h-screen bg-slate-50 selection:bg-emerald-100 selection:text-emerald-900 pb-20">
+      {/* Luxury White Glass Navbar */}
+      <nav className="bg-white/95 backdrop-blur-md border-b border-emerald-900/10 shadow-xs px-8 py-4 flex items-center text-slate-800 gap-4 sticky top-0 z-40">
+        <button onClick={() => navigate('/admin')} className="text-slate-600 hover:text-emerald-700 p-2 rounded-xl hover:bg-emerald-50 transition cursor-pointer">
+          <ArrowLeft size={20} />
         </button>
-        <h1 className="text-2xl font-bold text-white">Smart Candidate Ranking</h1>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white shadow-md shadow-emerald-600/20 font-black">
+            P
+          </div>
+          <h1 className="text-xl font-black bg-gradient-to-r from-emerald-700 via-teal-700 to-slate-900 bg-clip-text text-transparent">
+            Smart Candidate Ranking
+          </h1>
+        </div>
       </nav>
 
       <div className="max-w-7xl mx-auto p-8">
         
         {company && (
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
-            <h2 className="text-2xl font-bold text-indigo-700 mb-2">{company.name}</h2>
-            <div className="flex flex-wrap gap-4 text-sm font-medium text-slate-600 mb-4">
-              <span className="bg-slate-100 px-3 py-1 rounded-full">{company.role}</span>
-              <span className="bg-slate-100 px-3 py-1 rounded-full">CTC: {company.ctc}</span>
-              <span className="bg-slate-100 px-3 py-1 rounded-full">{company.location}</span>
+          <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-8 mb-8">
+            <h2 className="text-3xl font-black text-slate-900 mb-2">{company.name}</h2>
+            <div className="flex flex-wrap gap-3 text-xs font-bold text-slate-700 mb-4">
+              <span className="bg-emerald-50 text-emerald-800 px-3.5 py-1.5 rounded-full border border-emerald-200">{company.role}</span>
+              <span className="bg-emerald-50 text-emerald-800 px-3.5 py-1.5 rounded-full border border-emerald-200">CTC: {company.ctc}</span>
+              <span className="bg-slate-100 px-3.5 py-1.5 rounded-full border border-slate-200">{company.location}</span>
             </div>
-            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 text-sm text-slate-700 whitespace-pre-wrap">
-              <strong className="block mb-1 text-slate-800">Job Description:</strong>
+            <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80 text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
+              <strong className="block mb-1 text-slate-900 font-bold uppercase tracking-wider text-[11px]">Job Description:</strong>
               {company.jd}
             </div>
           </div>
         )}
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8 flex flex-wrap justify-between items-center gap-4">
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6 mb-8 flex flex-wrap justify-between items-center gap-4">
           <div>
-            <h2 className="text-xl font-bold text-slate-800">Ranked Applicants</h2>
-            <p className="text-slate-500 text-sm">Candidates sorted intelligently based on JD alignment.</p>
+            <h2 className="text-xl font-black text-slate-900">Ranked Applicants</h2>
+            <p className="text-slate-500 text-xs mt-0.5">Sorted with calibrated semantic AI matching & section analysis.</p>
           </div>
           <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-sm font-medium text-slate-600 mr-2">Quick Select:</span>
-            <button onClick={() => handleSelectTop(10)} className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-sm font-medium transition cursor-pointer">Top 10</button>
-            <button onClick={() => handleSelectTop(20)} className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-sm font-medium transition cursor-pointer">Top 20</button>
-            <button onClick={() => handleSelectTop(50)} className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-sm font-medium transition cursor-pointer">Top 50</button>
-            <div className="w-px h-6 bg-slate-300 mx-2"></div>
-            <button disabled={analyzing} onClick={() => handleBulkStatus('SHORTLISTED')} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-sm transition flex gap-1 items-center cursor-pointer disabled:opacity-50">
-              <CheckCircle size={16} /> Bulk Shortlist
+            <span className="text-xs font-bold text-slate-600 mr-2 uppercase tracking-wider">Quick Select:</span>
+            <button onClick={() => handleSelectTop(10)} className="bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">Top 10</button>
+            <button onClick={() => handleSelectTop(20)} className="bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">Top 20</button>
+            <button onClick={() => handleSelectTop(50)} className="bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">Top 50</button>
+            <div className="w-px h-6 bg-slate-200 mx-2"></div>
+            <button disabled={analyzing} onClick={() => handleBulkStatus('SHORTLISTED')} className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition flex gap-1.5 items-center cursor-pointer disabled:opacity-50">
+              <CheckCircle size={15} /> Bulk Shortlist
             </button>
-            <button disabled={analyzing} onClick={() => handleBulkStatus('REJECTED')} className="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-sm transition flex gap-1 items-center cursor-pointer disabled:opacity-50">
-              <XCircle size={16} /> Bulk Reject
+            <button disabled={analyzing} onClick={() => handleBulkStatus('REJECTED')} className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-rose-600/20 transition flex gap-1.5 items-center cursor-pointer disabled:opacity-50">
+              <XCircle size={15} /> Bulk Reject
             </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-100 text-slate-600 font-medium border-b border-slate-200">
+            <thead className="bg-slate-50 text-slate-600 font-bold text-[11px] uppercase tracking-wider border-b border-slate-200">
               <tr>
                 <th className="p-4 w-12">
-                  <input type="checkbox" onChange={handleSelectAll} checked={candidates.length > 0 && selectedIds.size === candidates.length} className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer" />
+                  <input type="checkbox" onChange={handleSelectAll} checked={candidates.length > 0 && selectedIds.size === candidates.length} className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500 cursor-pointer accent-emerald-600" />
                 </th>
                 <th className="p-4">Rank & Candidate</th>
+                <th className="p-4">Match Rating</th>
                 <th className="p-4">Final AI Score</th>
-                <th className="p-4">Semantic Match</th>
                 <th className="p-4">Skills Match</th>
                 <th className="p-4">Action</th>
               </tr>
@@ -162,17 +178,19 @@ export default function CandidateRanking() {
               )}
               {candidates.map((c, index) => {
                 const s = c.scores || {};
+                const exp = s.explanations || {};
+                const sec = exp.sections || {};
                 const isSelected = selectedIds.has(c.application_id);
                 const isExpanded = expandedId === c.application_id;
 
                 return (
                   <React.Fragment key={c.application_id}>
-                    <tr className={`hover:bg-slate-50 transition ${isSelected ? 'bg-indigo-50/50' : ''}`}>
+                    <tr className={`hover:bg-slate-50/80 transition ${isSelected ? 'bg-emerald-50/40' : ''}`}>
                       <td className="p-4">
-                        <input type="checkbox" checked={isSelected} onChange={() => handleSelectOne(c.application_id)} className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer" />
+                        <input type="checkbox" checked={isSelected} onChange={() => handleSelectOne(c.application_id)} className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500 cursor-pointer accent-emerald-600" />
                       </td>
-                      <td className="p-4 font-bold text-slate-800 flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${index < 10 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                      <td className="p-4 font-bold text-slate-900 flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${index < 10 ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-slate-100 text-slate-600'}`}>
                           #{index + 1}
                         </div>
                         <div>
@@ -181,66 +199,225 @@ export default function CandidateRanking() {
                         </div>
                       </td>
                       <td className="p-4">
+                        {getMatchTierBadge(exp.matchTier, s.finalScore)}
+                      </td>
+                      <td className="p-4">
                         <div className="flex items-center gap-2">
-                          <div className="w-full bg-slate-200 rounded-full h-2.5 max-w-[100px]">
-                            <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${s.finalScore || 0}%` }}></div>
+                          <div className="w-full bg-slate-200/80 rounded-full h-2.5 max-w-[100px] overflow-hidden">
+                            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 h-2.5 rounded-full" style={{ width: `${s.finalScore || 0}%` }}></div>
                           </div>
-                          <span className="font-bold text-slate-700">{s.finalScore || 0}</span>
+                          <span className="font-bold text-slate-800">{s.finalScore || 0}</span>
                         </div>
                       </td>
-                      <td className="p-4 text-slate-600">{s.semanticScore || 0}%</td>
-                      <td className="p-4 text-slate-600">{s.skillsScore || 0}%</td>
+                      <td className="p-4 text-slate-700 font-bold">{s.skillsScore || 0}%</td>
                       <td className="p-4">
-                        <button onClick={() => setExpandedId(isExpanded ? null : c.application_id)} className="text-indigo-600 hover:bg-indigo-50 px-3 py-1 rounded transition text-sm font-medium flex items-center gap-1 cursor-pointer">
-                          {isExpanded ? 'Hide Details' : 'View AI Breakdown'} {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        <button onClick={() => setExpandedId(isExpanded ? null : c.application_id)} className="text-emerald-700 hover:bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl transition text-xs font-bold flex items-center gap-1 cursor-pointer shadow-xs">
+                          {isExpanded ? 'Hide Breakdown' : 'Detailed Analysis'} {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                         </button>
                       </td>
                     </tr>
                     {isExpanded && (
-                      <tr className="bg-slate-50/50">
-                        <td colSpan="6" className="p-0 border-b border-slate-200">
-                          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                            
-                            <div className="space-y-4">
-                              <div>
-                                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2"><Brain size={16} className="text-indigo-600" /> Scoring Breakdown</h4>
-                                <ul className="text-sm text-slate-600 space-y-2 bg-white p-4 rounded-lg border border-slate-200">
-                                  <li className="flex justify-between"><span>Semantic Similarity (40% weight):</span> <span className="font-medium text-slate-800">{s.semanticScore}%</span></li>
-                                  <li className="flex justify-between"><span>Skills Match (25% weight):</span> <span className="font-medium text-slate-800">{s.skillsScore}%</span></li>
-                                  <li className="flex justify-between"><span>Project Relevance (15% weight):</span> <span className="font-medium text-slate-800">{s.projectScore}%</span></li>
-                                  <li className="flex justify-between"><span>Certifications Value (10% weight):</span> <span className="font-medium text-slate-800">{s.certScore}%</span></li>
-                                  <li className="flex justify-between"><span>Achievements Value (10% weight):</span> <span className="font-medium text-slate-800">{s.achScore}%</span></li>
-                                </ul>
+                      <tr className="bg-slate-50/70">
+                        <td colSpan="6" className="p-6 border-b border-slate-200 space-y-6">
+                          
+                          {/* 1. Summary & Fit Banner */}
+                          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <Brain size={18} className="text-indigo-600" />
+                                <h4 className="text-base font-bold text-slate-800">AI Candidate Summary</h4>
+                                {getMatchTierBadge(exp.matchTier, s.finalScore)}
+                              </div>
+                              <p className="text-sm text-slate-600">{exp.summaryText || 'Extracted skills and section alignment evaluated.'}</p>
+                            </div>
+                            <div className="bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-lg text-right">
+                              <span className="block text-xs font-semibold text-indigo-600 uppercase">Overall Match</span>
+                              <span className="text-2xl font-black text-indigo-900">{s.finalScore || 0}%</span>
+                            </div>
+                          </div>
+
+                          {/* 2. 5-Component Weighted Breakdown */}
+                          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                              <Layers size={16} className="text-indigo-600" /> Weighted Scoring Breakdown
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+                              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                <span className="block text-xs font-medium text-slate-500">Semantic Context (40%)</span>
+                                <span className="text-lg font-bold text-slate-800">{s.semanticScore}%</span>
+                              </div>
+                              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                <span className="block text-xs font-medium text-slate-500">Skills Match (25%)</span>
+                                <span className="text-lg font-bold text-slate-800">{s.skillsScore}%</span>
+                              </div>
+                              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                <span className="block text-xs font-medium text-slate-500">Project Alignment (15%)</span>
+                                <span className="text-lg font-bold text-slate-800">{s.projectScore}%</span>
+                              </div>
+                              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                <span className="block text-xs font-medium text-slate-500">Certifications (10%)</span>
+                                <span className="text-lg font-bold text-slate-800">{s.certScore}%</span>
+                              </div>
+                              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                <span className="block text-xs font-medium text-slate-500">Achievements (10%)</span>
+                                <span className="text-lg font-bold text-slate-800">{s.achScore}%</span>
                               </div>
                             </div>
+                          </div>
+
+                          {/* 3. Skill Matching Grid */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             
-                            <div className="space-y-4">
-                              <div>
-                                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2"><CheckSquare size={16} className="text-green-600" /> Matched Domain & Skills</h4>
-                                <div className="space-y-2">
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {(s.explanations?.matchedDomains && s.explanations.matchedDomains.length > 0) ? s.explanations.matchedDomains.map((d, idx) => (
-                                      <span key={idx} className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs font-bold border border-indigo-200 uppercase tracking-wide">{d}</span>
-                                    )) : null}
-                                    
-                                    {(s.explanations?.matchedSkills && s.explanations.matchedSkills.length > 0) ? s.explanations.matchedSkills.map((sk, idx) => (
-                                      <span key={idx} className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium border border-green-200">{sk}</span>
-                                    )) : <span className="text-sm text-slate-500">No exact JD skills matched.</span>}
-                                  </div>
-                                </div>
+                            {/* Matched JD Skills */}
+                            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                              <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                <CheckSquare size={16} className="text-emerald-600" /> Matched Required Skills ({exp.matchedSkills?.length || 0})
+                              </h4>
+                              <div className="flex flex-wrap gap-1.5">
+                                {exp.matchedSkills && exp.matchedSkills.length > 0 ? (
+                                  exp.matchedSkills.map((sk, idx) => (
+                                    <span key={idx} className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-md text-xs font-medium">
+                                      ✓ {sk}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-xs text-slate-400">No required skills matched explicitly.</span>
+                                )}
                               </div>
-                              
-                              <div>
-                                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2"><Star size={16} className="text-amber-500" /> Missing Core Requirements</h4>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {(s.explanations?.missingSkills && s.explanations.missingSkills.length > 0) ? s.explanations.missingSkills.map((sk, idx) => (
-                                    <span key={idx} className="bg-red-50 text-red-600 px-2 py-1 rounded text-xs font-medium border border-red-100">{sk}</span>
-                                  )) : <span className="text-sm text-slate-500">Candidate meets all explicit JD skills.</span>}
-                                </div>
+                            </div>
+
+                            {/* Missing JD Skills */}
+                            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                              <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                <Star size={16} className="text-amber-500" /> Missing Required Skills ({exp.missingSkills?.length || 0})
+                              </h4>
+                              <div className="flex flex-wrap gap-1.5">
+                                {exp.missingSkills && exp.missingSkills.length > 0 ? (
+                                  exp.missingSkills.map((sk, idx) => (
+                                    <span key={idx} className="bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-md text-xs font-medium">
+                                      ✗ {sk}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-xs text-slate-500">Candidate satisfies all JD required skills.</span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Additional Skills */}
+                            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                              <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                <Code size={16} className="text-indigo-600" /> Additional Skills ({exp.additionalSkills?.length || 0})
+                              </h4>
+                              <div className="flex flex-wrap gap-1.5">
+                                {exp.additionalSkills && exp.additionalSkills.length > 0 ? (
+                                  exp.additionalSkills.map((sk, idx) => (
+                                    <span key={idx} className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-md text-xs font-medium">
+                                      + {sk}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-xs text-slate-400">No additional skills detected.</span>
+                                )}
                               </div>
                             </div>
 
                           </div>
+
+                          {/* 4. Categorized Skill Inventory */}
+                          {exp.categorizedCandidateSkills && Object.keys(exp.categorizedCandidateSkills).length > 0 && (
+                            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                              <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                <Code size={16} className="text-indigo-600" /> Candidate Full Skill Inventory by Domain
+                              </h4>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                {Object.entries(exp.categorizedCandidateSkills).map(([catName, catSkills], idx) => (
+                                  <div key={idx} className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                    <span className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">{catName}</span>
+                                    <div className="flex flex-wrap gap-1">
+                                      {catSkills.map((s, sIdx) => (
+                                        <span key={sIdx} className={`px-2 py-0.5 rounded text-xs font-medium ${exp.matchedSkills?.includes(s) ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-white text-slate-700 border border-slate-200'}`}>
+                                          {s}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 5. Detailed Resume Section Summaries */}
+                          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                            <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                              <FileText size={16} className="text-indigo-600" /> Detailed Resume Section Summaries
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                              
+                              {/* Skills Section */}
+                              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                                    <Code size={14} className="text-indigo-600" /> Skills Section
+                                  </span>
+                                  <span className={`px-2 py-0.5 rounded font-bold ${sec.skills?.hasContent ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
+                                    {sec.skills?.hasContent ? 'Detected' : 'Empty'}
+                                  </span>
+                                </div>
+                                <p className="text-slate-600 leading-relaxed font-mono text-[11px] bg-white p-2.5 rounded border border-slate-100">
+                                  {sec.skills?.preview || 'No explicit skills header found'}
+                                </p>
+                              </div>
+
+                              {/* Projects Section */}
+                              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                                    <Layers size={14} className="text-indigo-600" /> Projects Section
+                                  </span>
+                                  <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-bold">
+                                    Score: {sec.projects?.score || s.projectScore || 0}%
+                                  </span>
+                                </div>
+                                <p className="text-slate-600 leading-relaxed font-mono text-[11px] bg-white p-2.5 rounded border border-slate-100">
+                                  {sec.projects?.preview || 'No projects section detected'}
+                                </p>
+                              </div>
+
+                              {/* Experience Section */}
+                              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                                    <Briefcase size={14} className="text-indigo-600" /> Experience Section
+                                  </span>
+                                  <span className={`px-2 py-0.5 rounded font-bold ${sec.experience?.hasContent ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
+                                    {sec.experience?.hasContent ? 'Detected' : 'Empty'}
+                                  </span>
+                                </div>
+                                <p className="text-slate-600 leading-relaxed font-mono text-[11px] bg-white p-2.5 rounded border border-slate-100">
+                                  {sec.experience?.preview || 'No experience section listed'}
+                                </p>
+                              </div>
+
+                              {/* Certifications & Achievements */}
+                              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                                    <Award size={14} className="text-indigo-600" /> Certifications & Achievements
+                                  </span>
+                                  <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">
+                                    Bonus Scores: {s.certScore || 0}% / {s.achScore || 0}%
+                                  </span>
+                                </div>
+                                <div className="space-y-1 bg-white p-2.5 rounded border border-slate-100 font-mono text-[11px]">
+                                  <p><strong className="text-slate-700">Certs:</strong> {sec.certifications?.preview || 'None'}</p>
+                                  <p><strong className="text-slate-700">Achievements:</strong> {sec.achievements?.preview || 'None'}</p>
+                                </div>
+                              </div>
+
+                            </div>
+                          </div>
+
                         </td>
                       </tr>
                     )}
@@ -254,3 +431,4 @@ export default function CandidateRanking() {
     </div>
   );
 }
+
