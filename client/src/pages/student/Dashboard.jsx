@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import { useModal } from '../../context/ModalContext';
 import { Upload, FileText, CheckCircle, Search, LogOut, History, X, Bell, AlertCircle, Sparkles, Building2, MessageSquarePlus } from 'lucide-react';
 
 export default function StudentDashboard() {
   const { user, logout, fetchUser } = useAuth();
+  const { showAlert } = useModal();
   const [companies, setCompanies] = useState([]);
   const [applications, setApplications] = useState([]);
   const [resumeFile, setResumeFile] = useState(null);
@@ -65,43 +67,44 @@ export default function StudentDashboard() {
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!resumeFile) return alert('Please select a PDF resume file first');
+    if (!resumeFile) return showAlert({ title: 'Select File', message: 'Please select a PDF resume file first.', type: 'info' });
     const formData = new FormData();
     formData.append('resume', resumeFile);
     try {
       await axios.post('/resume/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      alert('Resume Uploaded Successfully!');
+      showAlert({ title: 'Resume Uploaded', message: 'Your resume has been uploaded & parsed successfully!', type: 'success' });
       fetchUser();
     } catch (err) {
-      alert('Upload failed');
+      showAlert({ title: 'Upload Failed', message: err.response?.data?.message || 'Resume upload failed', type: 'error' });
     }
   };
 
   const handlePostExperience = async (e) => {
     e.preventDefault();
-    if (!expCompanyId || !expContent.trim()) return alert('Please select a company and write your experience.');
+    if (!expCompanyId || !expContent.trim()) return showAlert({ title: 'Incomplete Details', message: 'Please select a company and write your interview experience.', type: 'info' });
     try {
       await axios.post('/experiences', { companyId: expCompanyId, content: expContent });
-      alert('Experience posted successfully!');
+      showAlert({ title: 'Experience Shared', message: 'Interview experience posted successfully!', type: 'success' });
       setExpContent('');
       setShowExpModal(false);
       fetchData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to post experience');
+      showAlert({ title: 'Error', message: err.response?.data?.message || 'Failed to post experience', type: 'error' });
     }
   };
 
   const handleApply = async (companyId) => {
     try {
       await axios.post('/applications/apply', { companyId });
-      alert('Applied Successfully!');
+      showAlert({ title: 'Application Submitted', message: 'Successfully applied to the placement drive!', type: 'success' });
       fetchData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to apply');
+      showAlert({ title: 'Application Failed', message: err.response?.data?.message || 'Failed to apply to drive', type: 'error' });
     }
   };
+
 
   return (
     <div className="min-h-screen bg-slate-50 selection:bg-emerald-100 selection:text-emerald-900 pb-20">

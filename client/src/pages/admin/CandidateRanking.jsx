@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import jsCookie from 'js-cookie';
-import { ArrowLeft, CheckCircle, XCircle, ChevronDown, ChevronUp, Brain, Star, CheckSquare, Award, Briefcase, Code, Layers, FileText } from 'lucide-react';
+import { useModal } from '../../context/ModalContext';
+import { ArrowLeft, CheckCircle, XCircle, ChevronDown, ChevronUp, Brain, Star, CheckSquare, Award, Briefcase, Code, Layers, FileText, Link as LinkIcon, Copy, ExternalLink, CheckCircle2, X } from 'lucide-react';
 
 export default function CandidateRanking() {
   const { companyId } = useParams();
   const navigate = useNavigate();
+  const { showAlert } = useModal();
   
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
@@ -14,6 +16,7 @@ export default function CandidateRanking() {
   const [candidates, setCandidates] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [expandedId, setExpandedId] = useState(null);
+  const [interviewLinkModal, setInterviewLinkModal] = useState({ show: false, url: '', companyName: '', copied: false });
 
   useEffect(() => {
     fetchRanking();
@@ -30,7 +33,7 @@ export default function CandidateRanking() {
       setCandidates(res.data.ranked || []);
     } catch (err) {
       console.error(err);
-      alert('Error fetching candidates for ranking');
+      showAlert({ title: 'Error', message: 'Error fetching candidate ranking analysis', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -57,7 +60,7 @@ export default function CandidateRanking() {
   };
 
   const handleBulkStatus = async (status) => {
-    if (selectedIds.size === 0) return alert('No candidates selected');
+    if (selectedIds.size === 0) return showAlert({ title: 'No Selection', message: 'Please select candidate applications to update.', type: 'info' });
     
     try {
       setAnalyzing(true);
@@ -68,16 +71,57 @@ export default function CandidateRanking() {
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      alert(`Successfully updated to ${status}`);
+      showAlert({ title: 'Candidates Updated', message: `Successfully updated ${selectedIds.size} candidate(s) status to ${status}.`, type: 'success' });
       setSelectedIds(new Set());
       fetchRanking();
     } catch (err) {
       console.error(err);
-      alert('Error performing bulk update');
+      showAlert({ title: 'Error', message: 'Error performing bulk status update', type: 'error' });
     } finally {
       setAnalyzing(false);
     }
   };
+
+  const handleGenerateLink = async () => {
+    if (!company) return;
+    try {
+      const token = jsCookie.get('token');
+      const res = await axios.post('/interview/admin/create-interview-link', { companyId: company.id }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const fullUrl = `${window.location.origin}${res.data.url}`;
+
+      try {
+        await navigator.clipboard.writeText(fullUrl);
+      } catch (e) {
+        console.warn('Clipboard write failed:', e);
+      }
+
+      setInterviewLinkModal({
+        show: true,
+        url: fullUrl,
+        companyName: company.name,
+        copied: true
+      });
+    } catch (err) {
+      console.error(err);
+      showAlert({ title: 'Error', message: 'Error generating interview link', type: 'error' });
+    }
+  };
+
+
+  const handleCopyLink = async (url) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setInterviewLinkModal(prev => ({ ...prev, copied: true }));
+      setTimeout(() => {
+        setInterviewLinkModal(prev => ({ ...prev, copied: false }));
+      }, 3000);
+    } catch (err) {
+      console.error('Failed to copy', err);
+    }
+  };
+
 
   const getMatchTierBadge = (tier, score) => {
     if (tier === 'Exceptional Fit' || score >= 80) {
@@ -153,8 +197,12 @@ export default function CandidateRanking() {
             <button disabled={analyzing} onClick={() => handleBulkStatus('REJECTED')} className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-rose-600/20 transition flex gap-1.5 items-center cursor-pointer disabled:opacity-50">
               <XCircle size={15} /> Bulk Reject
             </button>
+            <button onClick={handleGenerateLink} className="bg-teal-50 text-teal-800 hover:bg-teal-100 border border-teal-200 px-4 py-2 rounded-xl text-xs font-bold transition flex gap-1.5 items-center cursor-pointer shadow-xs">
+              <LinkIcon size={15} className="text-teal-600" /> Interview Link
+            </button>
           </div>
         </div>
+
 
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
           <table className="w-full text-left text-sm">
@@ -428,7 +476,74 @@ export default function CandidateRanking() {
           </table>
         </div>
       </div>
+
+      {/* Luxury Interview Link Modal with Auto-Copy */}
+      {interviewLinkModal.show && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200/80 max-w-md w-full p-8 relative">
+            <button 
+              onClick={() => setInterviewLinkModal({ show: false, url: '', companyName: '', copied: false })}
+              className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-100 transition cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 mb-4 shadow-xs">
+              <LinkIcon size={24} />
+            </div>
+
+            <h3 className="text-xl font-bold text-slate-900">Interview Portal Link</h3>
+            <p className="text-slate-500 text-xs mt-1">
+              Live panel link for <span className="font-bold text-slate-800">{interviewLinkModal.companyName}</span>
+            </p>
+
+            {/* Auto-copied badge alert */}
+            {interviewLinkModal.copied && (
+              <div className="mt-4 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center gap-2 text-emerald-800 text-xs font-bold animate-in fade-in slide-in-from-top-1">
+                <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                Link copied automatically!
+              </div>
+            )}
+
+            {/* Copy Input Box */}
+            <div className="mt-4 flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={interviewLinkModal.url}
+                onClick={() => handleCopyLink(interviewLinkModal.url)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer select-all"
+              />
+              <button
+                onClick={() => handleCopyLink(interviewLinkModal.url)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0 shadow-sm"
+              >
+                {interviewLinkModal.copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
+                {interviewLinkModal.copied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setInterviewLinkModal({ show: false, url: '', companyName: '', copied: false })}
+                className="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Done
+              </button>
+              <a
+                href={interviewLinkModal.url}
+                target="_blank"
+                rel="noreferrer"
+                className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer shadow-sm"
+              >
+                Open Portal <ExternalLink size={14} />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 

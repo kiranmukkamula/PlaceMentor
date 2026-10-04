@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import { useModal } from '../../context/ModalContext';
 import { ArrowLeft, Bell, Trash2, FileText, UserCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import jsCookie from 'js-cookie';
@@ -8,6 +9,7 @@ import jsCookie from 'js-cookie';
 export default function StudentsList() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { showAlert, showConfirm } = useModal();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,7 +27,7 @@ export default function StudentsList() {
       setStudents(res.data.students || []);
     } catch (err) {
       console.error(err);
-      alert('Error fetching students list');
+      showAlert({ title: 'Error', message: 'Error fetching students list', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -37,28 +39,34 @@ export default function StudentsList() {
       await axios.post(`/users/${studentId}/notify-resume`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      alert('Notification sent successfully!');
+      showAlert({ title: 'Notification Sent', message: 'Resume upload reminder notification sent to student.', type: 'success' });
     } catch (err) {
       console.error(err);
-      alert('Error sending notification');
+      showAlert({ title: 'Error', message: 'Error sending notification', type: 'error' });
     }
   };
 
-  const handleDeleteResume = async (studentId) => {
-    if (!window.confirm('Are you sure you want to delete this resume?')) return;
-    
-    try {
-      const token = jsCookie.get('token');
-      await axios.delete(`/users/${studentId}/resume`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      alert('Resume deleted successfully!');
-      fetchStudents();
-    } catch (err) {
-      console.error(err);
-      alert('Error deleting resume');
-    }
+  const handleDeleteResume = (studentId) => {
+    showConfirm({
+      title: 'Delete Student Resume',
+      message: 'Are you sure you want to delete this student’s uploaded resume? This action cannot be undone.',
+      confirmText: 'Delete Resume',
+      onConfirm: async () => {
+        try {
+          const token = jsCookie.get('token');
+          await axios.delete(`/users/${studentId}/resume`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          showAlert({ title: 'Resume Deleted', message: 'Student resume deleted successfully.', type: 'success' });
+          fetchStudents();
+        } catch (err) {
+          console.error(err);
+          showAlert({ title: 'Error', message: 'Error deleting student resume', type: 'error' });
+        }
+      }
+    });
   };
+
 
   return (
     <div className="min-h-screen bg-slate-50 selection:bg-emerald-100 selection:text-emerald-900 pb-20">
