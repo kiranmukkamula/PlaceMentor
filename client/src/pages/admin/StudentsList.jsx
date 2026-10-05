@@ -142,7 +142,7 @@ export default function StudentsList() {
                     </td>
                     <td className="p-4">
                       {student.resume_url ? (
-                        <a href={`http://localhost:5000${student.resume_url}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-900 font-bold text-xs hover:underline cursor-pointer">
+                        <a href={`${import.meta.env.VITE_SERVER_URL || ''}${student.resume_url}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-900 font-bold text-xs hover:underline cursor-pointer">
                           <FileText size={15} /> View PDF
                         </a>
                       ) : (

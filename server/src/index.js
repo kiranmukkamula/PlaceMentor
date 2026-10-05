@@ -3,6 +3,12 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const express = require('express');
 const cors = require('cors');
 
+// Fail fast if JWT_SECRET is not configured
+if (!process.env.JWT_SECRET) {
+  console.error('❌ FATAL ERROR: JWT_SECRET environment variable is missing.');
+  process.exit(1);
+}
+
 const authRoutes = require('./routes/auth');
 const companyRoutes = require('./routes/companies');
 const applicationRoutes = require('./routes/applications');
@@ -16,9 +22,30 @@ const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
+
+// CORS configuration supporting single origin or comma-separated list
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(',').map((origin) => origin.trim())
+  : ['http://localhost:5173', 'http://localhost', 'http://localhost:80'];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Permissive fallback to allow proxied same-origin requests
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
 const io = new Server(server, {
   cors: {
-    origin: '*', // Set specific origins in production
+    origin: allowedOrigins.includes('*') ? '*' : allowedOrigins,
+    credentials: true,
     methods: ['GET', 'POST']
   }
 });
@@ -51,7 +78,7 @@ app.use((req, res, next) => {
 });
 
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static('uploads')); // Serve uploaded resumes
@@ -68,12 +95,17 @@ app.use('/api/experiences', experiencesRoutes);
 const interviewRoutes = require('./routes/interview');
 app.use('/api/interview', interviewRoutes);
 
+// Health check endpoint for Docker & monitoring
+app.get(['/health', '/api/health'], (req, res) => {
+  res.status(200).json({ status: 'ok', uptime: process.uptime() });
+});
+
 // Base route
 app.get('/', (req, res) => {
   res.send('PlaceMentor API is running');
 });
 
-// Start Server
-server.listen(PORT, () => {
+// Start Server listening on 0.0.0.0
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
 });

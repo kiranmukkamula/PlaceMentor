@@ -25,7 +25,6 @@ A comprehensive portal for tracking placement companies, managing applications, 
    ```bash
    cd server
    npm install
-   # Manually execute the server/database.sql on your PostgreSQL instance
    npm run dev
    ```
 
@@ -39,11 +38,11 @@ A comprehensive portal for tracking placement companies, managing applications, 
 ## Deployment Guide
 
 ### Database (PostgreSQL Cloud)
-Deploy a managed PostgreSQL database through Supabase, Neon, or Railway. Update your `DATABASE_URL` everywhere.
+Deploy or connect to your existing PostgreSQL database instance and update your `DATABASE_URL`.
 
-### Backend (Render/Railway)
+### Backend (Render/Railway/AWS App Runner)
 1. Set start command to: `node src/index.js`
-2. Connect to your Cloud Postgres Database & run the `database.sql` script once.
+2. Connect to your Cloud Postgres Database via `DATABASE_URL`.
 3. Add all environment variables.
 
 ### Frontend (Vercel)

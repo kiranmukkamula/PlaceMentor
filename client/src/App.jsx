@@ -5,6 +5,7 @@ import { ModalProvider } from './context/ModalContext';
 
 // Pages
 import Login from './pages/Login';
+import AdminLogin from './pages/AdminLogin';
 import Register from './pages/Register';
 import Landing from './pages/Landing';
 import StudentDashboard from './pages/student/Dashboard';
@@ -31,6 +32,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin' : '/student'} replace /> : <Landing />} />
       <Route path="/login" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin' : '/student'} replace /> : <Login />} />
+      <Route path="/admin/login" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin' : '/student'} replace /> : <AdminLogin />} />
       <Route path="/register" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin' : '/student'} replace /> : <Register />} />
       <Route path="/interview/:token" element={<InterviewPortal />} />
       

@@ -23,7 +23,8 @@ export default function AdminDashboard() {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    socketRef.current = io(`http://${window.location.hostname}:5000`);
+    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
+    socketRef.current = io(SOCKET_URL);
     
     socketRef.current.on('round-submitted', () => {
       fetchCompanies();
@@ -342,7 +343,7 @@ export default function AdminDashboard() {
                         <td className="p-4 text-slate-700 font-bold">{app.student.cgpa}</td>
                         <td className="p-4">
                           {app.student.resumeUrl ? (
-                            <a href={`http://localhost:5000${app.student.resumeUrl}`} target="_blank" rel="noreferrer" className="text-emerald-700 hover:text-emerald-900 font-bold text-xs hover:underline cursor-pointer">View Resume</a>
+                            <a href={`${import.meta.env.VITE_SERVER_URL || ''}${app.student.resumeUrl}`} target="_blank" rel="noreferrer" className="text-emerald-700 hover:text-emerald-900 font-bold text-xs hover:underline cursor-pointer">View Resume</a>
                           ) : (
                             <span className="text-slate-400 text-xs">No Resume</span>
                           )}

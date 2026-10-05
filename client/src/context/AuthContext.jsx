@@ -7,7 +7,8 @@ const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
 // Set default axios params & global interceptor
-axios.defaults.baseURL = 'http://localhost:5000/api';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '/api';
+axios.defaults.baseURL = BACKEND_URL;
 
 axios.interceptors.request.use(
   (config) => {

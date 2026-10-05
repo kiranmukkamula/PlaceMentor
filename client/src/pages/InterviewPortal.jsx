@@ -4,8 +4,8 @@ import axios from 'axios';
 import { io } from 'socket.io-client';
 import { CheckCircle2, ShieldAlert, Sparkles, Building2, UserCheck, Clock } from 'lucide-react';
 
-const API_URL = `http://${window.location.hostname}:5000/api`;
-const SOCKET_URL = `http://${window.location.hostname}:5000`;
+const API_URL = import.meta.env.VITE_BACKEND_URL || '/api';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
 
 const InterviewPortal = () => {
   const { token } = useParams();

@@ -15,14 +15,21 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ success: false, message: 'User already exists' });
     }
 
+    // Public registration is strictly for STUDENT accounts.
+    const normalizedEmail = (email || '').toLowerCase().trim();
+    if (normalizedEmail === 'admin@gmail.com') {
+      return res.status(400).json({ success: false, message: 'Admin account is pre-configured. Please log in via Admin Portal.' });
+    }
+    const assignedRole = 'STUDENT';
+
     const result = await db.query(
       `INSERT INTO users (name, email, password, role, cgpa, branch, skills) 
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, name, email, role`,
-      [name, email, password, role || 'STUDENT', cgpa ? parseFloat(cgpa) : null, branch, skills || []]
+      [name, normalizedEmail, password, assignedRole, cgpa ? parseFloat(cgpa) : null, branch, skills || []]
     );
 
     const user = result.rows[0];
-    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'placementor_secret_jwt_key', { expiresIn: '30d' });
+    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
     res.status(201).json({ success: true, user, token });
   } catch (error) {
@@ -47,7 +54,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'placementor_secret_jwt_key', { expiresIn: '30d' });
+    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
     res.json({ success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role }, token });
   } catch (error) {

@@ -46,7 +46,7 @@ export default function Landing() {
           <Link to="/register" className="group bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:shadow-emerald-600/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer">
             Student Portal <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
           </Link>
-          <Link to="/login" className="bg-white hover:bg-emerald-50/50 text-slate-800 border border-slate-200 hover:border-emerald-300 px-8 py-4 rounded-2xl font-bold text-lg shadow-xs hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer">
+          <Link to="/admin/login" className="bg-slate-900 hover:bg-slate-800 text-white border border-slate-700 px-8 py-4 rounded-2xl font-bold text-lg shadow-md shadow-slate-900/20 hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer">
             Admin Dashboard
           </Link>
         </div>
