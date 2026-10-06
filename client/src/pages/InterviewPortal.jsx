@@ -21,7 +21,7 @@ const InterviewPortal = () => {
   const fetchState = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_URL}/interview/state/${token}`);
+      const res = await axios.get(`/interview/state/${token}`);
       if (res.data.success) {
         setPortalState(res.data.state);
         setCompany(res.data.company);
@@ -77,7 +77,7 @@ const InterviewPortal = () => {
         allStudentIds: students.map(s => s.student_id)
       };
 
-      await axios.post(`${API_URL}/interview/${endpoint}`, payload);
+      await axios.post(`/interview/${endpoint}`, payload);
       setPortalState('LOCKED');
     } catch (err) {
       setError(err.response?.data?.message || 'Submission failed');

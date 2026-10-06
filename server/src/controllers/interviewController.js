@@ -34,13 +34,21 @@ exports.getInterviewState = async (req, res) => {
 
   try {
     const linkRes = await db.query('SELECT company_id, is_active FROM interview_links WHERE token = $1', [token]);
-    if (linkRes.rowCount === 0) return res.status(404).json({ success: false, message: 'Invalid token' });
+    if (linkRes.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Invalid or expired interview link. Please generate a new link from the Admin Dashboard.' });
+    }
     
     const { company_id, is_active } = linkRes.rows[0];
-    if (!is_active) return res.status(400).json({ success: false, message: 'Link is inactive' });
+    if (!is_active) {
+      return res.status(400).json({ success: false, message: 'This interview link has been deactivated.' });
+    }
 
     const companyRes = await db.query('SELECT name, role, current_round, status FROM companies WHERE id = $1', [company_id]);
+    if (companyRes.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Company drive associated with this link was not found.' });
+    }
     const company = companyRes.rows[0];
+    company.current_round = company.current_round || 1;
 
     if (company.status === 'PENDING_REVIEW') {
       return res.json({ success: true, state: 'LOCKED', company });
@@ -51,12 +59,12 @@ exports.getInterviewState = async (req, res) => {
 
     let students = [];
     if (company.current_round === 1) {
-      // Fetch shortlisted candidates
+      // Fetch shortlisted or applied candidates for Round 1
       const appsRes = await db.query(`
         SELECT u.id as student_id, u.name, u.email, u.branch, u.cgpa 
         FROM applications a 
         JOIN users u ON a.student_id = u.id 
-        WHERE a.company_id = $1 AND a.status = 'SHORTLISTED'
+        WHERE a.company_id = $1 AND a.status IN ('SHORTLISTED', 'APPLIED')
       `, [company_id]);
       students = appsRes.rows;
     } else {
@@ -73,7 +81,7 @@ exports.getInterviewState = async (req, res) => {
     res.json({ success: true, state: 'ACTIVE', company, students });
   } catch (error) {
     console.error('Error fetching interview state:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
   }
 };
 
